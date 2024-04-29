@@ -25,6 +25,7 @@ import signal
 import math
 import rospy
 import rospkg
+from typing import Optional
 
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
@@ -37,37 +38,43 @@ from grasplan.rqt_planning_scene.rosbag_interval_pub import RosbagIntervalPub
 
 
 class OpenFileDialog(QWidget):
-    '''
-    allow the user to select a different yaml file with a button,
-    this will open a dialog to select and open a yaml file
-    '''
+    """
+    A custom widget for opening a file dialog.
 
-    def __init__(self, initial_path=None):
+    Args:
+        default_path (str, optional): Default path to open the file dialog in. \
+            If not provided, the user's home directory is used.
+        file_type (str, optional): The file type filter for the file dialog. \
+            Must be a file extension without the dot e.g. 'yaml'. \
+            No filter is applied if not provided.
+        dialog_name (str, optional): The name of the file dialog window.
+    """
+
+    def __init__(self, default_path: str = None, file_type: str = None, dialog_name: str = None) -> None:
         super().__init__()
-        left, top, width, height = 10, 10, 640, 480
-        self.setGeometry(left, top, width, height)
-        self.initial_path = initial_path
+        self.setGeometry(10, 10, 640, 480)
+        self.default_path = default_path if default_path else os.environ['HOME']
+        self.file_type = file_type
+        self.dialog_name = dialog_name if dialog_name else 'Select file'
 
-    def openFileNameDialog(self, save_file_name_dialog=False):
+    def file_dialog(self) -> Optional[str]:
+        """
+        Opens a file dialog and returns the selected file path.
+
+        Returns:
+            Optional[str]: The selected file path, or None if no file was selected.
+        """
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        if self.initial_path is None:
-            initial_path = os.environ['HOME']
-        else:
-            initial_path = self.initial_path
-        if save_file_name_dialog:
-            fileName, _ = QFileDialog.getSaveFileName(
-                self, 'Select boxes yaml file', initial_path, 'Yaml Files (*.yaml)', options=options
-            )
-        else:
-            fileName, _ = QFileDialog.getOpenFileName(
-                self, 'Select boxes yaml file', initial_path, 'Yaml Files (*.yaml)', options=options
-            )
-        if fileName:
-            return fileName
 
-    def saveFileNameDialog(self):
-        return self.openFileNameDialog(save_file_name_dialog=True)
+        if not self.file_type:
+            file_name, _ = QFileDialog.getOpenFileName(self, self.dialog_name, self.default_path, options=options)
+        else:
+            file_name, _ = QFileDialog.getOpenFileName(
+                self, self.dialog_name, self.default_path, f"*.{self.file_type}", options=options
+            )
+
+        return file_name
 
 
 class RqtPlanningScene(Plugin):
@@ -281,8 +288,8 @@ class RqtPlanningScene(Plugin):
         self._widget.slideZ.setValue(slide_value_z)
 
     def handle_cmdLoadRosbag(self):
-        ofd = OpenFileDialog()
-        bag_path = ofd.openFileNameDialog()
+        ofd = OpenFileDialog(file_type='bag', dialog_name='Select rosbag file to load')
+        bag_path = ofd.file_dialog()
         if bag_path:
             self.rip = RosbagIntervalPub(bag_path)
         else:
@@ -308,8 +315,8 @@ class RqtPlanningScene(Plugin):
 
     def handle_cmdLoadYaml(self):
         grasplan_path = rospkg.RosPack().get_path('grasplan')
-        ofd = OpenFileDialog(initial_path=grasplan_path)
-        yaml_path = ofd.openFileNameDialog()
+        ofd = OpenFileDialog(grasplan_path, 'yaml', 'Select yaml file to load')
+        yaml_path = ofd.file_dialog()
         if yaml_path:
             self.psv.settings.yaml_path_to_read = yaml_path
             self.psv.reset()
@@ -323,7 +330,7 @@ class RqtPlanningScene(Plugin):
 
     def handle_cmdSaveYaml(self):
         grasplan_path = rospkg.RosPack().get_path('grasplan')
-        ofd = OpenFileDialog(initial_path=grasplan_path)
+        ofd = OpenFileDialog(grasplan_path, 'yaml', 'Select yaml file to save')
         yaml_path = ofd.saveFileNameDialog()
         if yaml_path:
             if '.yaml' not in yaml_path:
