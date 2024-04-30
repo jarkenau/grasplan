@@ -18,37 +18,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import rospy
-from geometry_msgs.msg import Pose, Quaternion, Point, Vector3
+from geometry_msgs.msg import Pose, Quaternion, Vector3
 from std_msgs.msg import ColorRGBA
-from interactive_markers.interactive_marker_server import (
-    InteractiveMarkerServer,
-    InteractiveMarker,
-)
-from visualization_msgs.msg import (
-    InteractiveMarkerFeedback,
-    InteractiveMarkerControl,
-    Marker,
-)
+from interactive_markers.interactive_marker_server import InteractiveMarker
+from visualization_msgs.msg import InteractiveMarkerControl, Marker
 
 
 class Color:
     GREEN = ColorRGBA(r=0, g=1, b=0, a=1)
-
-
-def callback(feedback: InteractiveMarkerFeedback) -> None:
-    """
-    Callback function for handling interactive marker feedback.
-
-    Args:
-        feedback (InteractiveMarkerFeedback): The feedback object containing information about the interactive marker.
-
-    Returns:
-        None
-    """
-    if feedback.event_type == InteractiveMarkerFeedback.POSE_UPDATE:
-        pose = feedback.pose
-        print(f"Pose updated: {pose.position.x}, {pose.position.y}, {pose.position.z}")
 
 
 def make_box(initial_pose: Pose, color: ColorRGBA, scale: Vector3, frame_id: str = "map") -> Marker:
@@ -132,19 +109,3 @@ def make_int_marker(name: str, initial_pose: Pose, box: Marker, frame_id: str = 
     int_marker.controls.append(control)
 
     return int_marker
-
-
-if __name__ == "__main__":
-    rospy.init_node("interactive_marker_test")
-
-    server = InteractiveMarkerServer("interactive_marker")
-
-    pose = Pose(position=Point(x=0, y=0, z=0), orientation=Quaternion(w=1, x=0, y=0, z=0))
-    box = make_box(pose, Color.GREEN, Vector3(x=0.45, y=0.45, z=0.45))
-    int_marker = make_int_marker("marker1", pose, box)
-
-    server.insert(int_marker, callback)
-
-    server.applyChanges()
-
-    rospy.spin()
