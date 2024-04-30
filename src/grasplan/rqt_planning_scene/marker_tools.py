@@ -32,6 +32,10 @@ from visualization_msgs.msg import (
 )
 
 
+class Color:
+    GREEN = ColorRGBA(r=0, g=1, b=0, a=1)
+
+
 def callback(feedback: InteractiveMarkerFeedback) -> None:
     """
     Callback function for handling interactive marker feedback.
@@ -92,7 +96,7 @@ def make_control(name: str, orientation: Quaternion, interaction_type) -> Intera
     return control
 
 
-def make_marker(name: str, initial_pose: Pose, frame_id: str = "map") -> InteractiveMarker:
+def make_int_marker(name: str, initial_pose: Pose, box: Marker, frame_id: str = "map") -> InteractiveMarker:
     """
     Create an InteractiveMarker object with the given name, start position, and frame ID.
 
@@ -101,6 +105,7 @@ def make_marker(name: str, initial_pose: Pose, frame_id: str = "map") -> Interac
     Parameters:
     - name (str): The name of the marker. Must be globally unique in the topic that it is being published in!
     - initial_pose (Pose): The initial position of the marker.
+    - box (Marker): The box to be positioned with the marker.
     - frame_id (str, optional): The frame ID of the marker. Defaults to "map".
 
     Returns:
@@ -111,9 +116,6 @@ def make_marker(name: str, initial_pose: Pose, frame_id: str = "map") -> Interac
     int_marker.pose = initial_pose
     int_marker.name = name
 
-    # add a box to controll with the marker
-    # make_box_control(int_marker)
-
     # add the individual controls to the marker
     int_marker.controls.append(make_control("rotate_x", Quaternion(w=1, x=1), InteractiveMarkerControl.ROTATE_AXIS))
     int_marker.controls.append(make_control("move_x", Quaternion(w=1, x=1), InteractiveMarkerControl.MOVE_AXIS))
@@ -122,12 +124,11 @@ def make_marker(name: str, initial_pose: Pose, frame_id: str = "map") -> Interac
     int_marker.controls.append(make_control("rotate_z", Quaternion(w=1, z=1), InteractiveMarkerControl.ROTATE_AXIS))
     int_marker.controls.append(make_control("move_z", Quaternion(w=1, z=1), InteractiveMarkerControl.MOVE_AXIS))
 
-    # TODO: add paraemters to add a box to the marker
-    # add a box for visualization purposes, the box could also be made moveable
+    # add the box to controll with the marker
     control = InteractiveMarkerControl()
-    control.markers.append(make_box(initial_pose, ColorRGBA(r=0.1, g=0.5, b=0.5, a=1), Vector3(x=0.5, y=0.5, z=1)))
+    control.markers.append(box)
     control.name = "box_display"
-
+    control.always_visible = True
     int_marker.controls.append(control)
 
     return int_marker
@@ -139,7 +140,8 @@ if __name__ == "__main__":
     server = InteractiveMarkerServer("interactive_marker")
 
     pose = Pose(position=Point(x=0, y=0, z=0), orientation=Quaternion(w=1, x=0, y=0, z=0))
-    int_marker = make_marker("marker1", pose)
+    box = make_box(pose, Color.GREEN, Vector3(x=0.45, y=0.45, z=0.45))
+    int_marker = make_int_marker("marker1", pose, box)
 
     server.insert(int_marker, callback)
 
